@@ -1,0 +1,304 @@
+# A* & Greedy best first search algorithm's with heuristics {Misplaced Tiles, Manhattan Distance and Combination of Both}
+
+def inversion_count(puzzle):
+    tiles = []
+    count = 0
+    for i in reversed(range(3)): # 2, 2, 2, 1, 1, 1, 0, 0, 0
+        for j in range(3): # 0, 1, 2, ...
+            tiles.append(puzzle[(j,i)])
+    for i in range(0, 9):
+        for j in range(i+1, 9):
+            if(tiles[i]!= 'b' and tiles[j]!= 'b' and tiles[i] > tiles[j]):
+                count = count + 1
+    return count
+
+def parity(puzzle, goal):
+    parity_start = inversion_count(puzzle)
+    parity_goal = inversion_count(goal)
+    impossible = False
+    if(not(parity_start %2 == parity_goal%2) ):
+        # If both even or both odd
+        impossible = True
+        print(f"This puzzle is Impossible: with initial state {str(parity_start)} and goal state {str(parity_goal)} parity")
+    return (parity_start,parity_goal,impossible)
+
+def find_blank(puzzle):
+    for tile, value in puzzle.items():
+        if value == 'b':
+            location = tile
+    return np.asarray(location)
+
+def possible_moves(location):
+    moves = []
+    if(location[0] != 2):
+        moves.append('Right')
+    if(location[0] != 0):
+        moves.append('Left')
+    if(location[1] != 2):
+        moves.append('Up')
+    if(location[1] != 0):
+        moves.append('Down')
+    return moves
+
+def possible_states(parent, actions, location):
+    all_states= []
+    for move in actions:
+        child = parent.copy()
+        if(move == 'Right'):
+            if(location[0] != 2):
+                child[location[0], location[1]] = child[location[0]+1, location[1]]
+                child[location[0]+1, location[1]] = 'b'
+
+        if(move == 'Left'):
+            if(location[0] != 0):
+                child[location[0], location[1]] = child[location[0]-1, location[1]]
+                child[location[0]-1, location[1]] = 'b'
+
+        if(move == 'Up'):
+            if(location[1] != 2): # tile above swaps
+                child[location[0], location[1]] = child[location[0], location[1]+1]
+                child[location[0], location[1]+1] = 'b'
+
+        if(move == 'Down'):
+            if(location[1] != 0):
+                child[location[0], location[1]] = child[location[0], location[1]-1]
+                child[location[0], location[1]-1] = 'b'
+
+        all_states.append(child)
+        
+    return (all_states)
+
+def manhattan_tiles(puzzle,goal):
+    distance = 0
+    if(puzzle == goal): # Want to find the number of misplaced tiles
+        return (0)
+    puzzle_list = list(puzzle)
+    goal_list = list(goal)
+    for i in range(0, 9):
+        for j in range(0, 9):
+            k_value = puzzle[puzzle_list[i]] # (i,j):value
+            k = puzzle_list[i] #(i,j) Tuple
+            g_value = goal[goal_list[j]] # (i,j):value
+            g = goal_list[j] #(i,j) Tuple
+            if(k_value != 'b' and k_value == g_value and k != g):
+                distance += abs(k[0] - g[0]) + abs(k[1] - g[1]) # (Index i - index i) + (index j - index j)
+    return distance
+    
+def misplaced_tiles(puzzle,goal):
+    misplaced = 0
+    for i in range(0,3):
+        for j in range(0,3):
+        # Goal State Check
+            if(puzzle == goal): # Want to find the number of misplaced tiles
+                return (0)
+            if(puzzle[i,j]!= 'b' and puzzle[i,j] != goal[i,j] ):
+                misplaced += 1
+    return misplaced
+
+def combined_solutions(puzzle,goal):
+    misplaced_distance,manhattan_distance = 0,0
+
+    misplaced_distance = misplaced_tiles(puzzle,goal)
+    manhattan_distance = manhattan_tiles(puzzle,goal)
+    # Or could do dominance: h2>h1 then h2 or h1>h1 then h1
+    # if(misplaced_distance >= manhattan_distance):
+    #     return(misplaced_distance)
+    # if(misplaced_distance < manhattan_distance):
+    #     return(manhattan_distance)
+    return(misplaced_distance + manhattan_distance / 2)
+
+def find_initial_score(state,goal,heuristic):
+    score = []
+
+    if(heuristic == "Manhattan"):
+        distance = manhattan_tiles(state,goal)
+    if(heuristic == "Misplaced"):
+        distance = misplaced_tiles(state,goal)
+    if(heuristic == "Both"):
+        distance = combined_solutions(state,goal)
+        
+    if(distance == 0):
+        print("Goal State Reached")
+        score.append(0)
+        return(score)
+
+    score.append(distance)
+    return score
+
+def find_score(queue,goal,heuristic,level,level_state, algorithm):
+    score = []
+    for state in queue:
+
+        if(heuristic == "Manhattan"):
+            distance = manhattan_tiles(state,goal)
+        if(heuristic == "Misplaced"):
+            distance = misplaced_tiles(state,goal)
+        if(heuristic == "Both"):
+            distance = combined_solutions(state,goal)
+         
+        if(algorithm == "A_Star"):
+            key = tuple(state.items()) # find g(n) The actual cost path from the start node to the current node.
+            key_level = key # Where to create the level for puzzle:level for g(n) ?
+            
+            if(key_level not in level_state):
+                level_state[key_level]=level # What level is the state at?
+
+            if(distance == 0):
+                print("Goal State Reached")
+                score.append(0)
+                return(score,level,level_state)
+
+            g_n = level_state[key_level]
+            score.append(distance + g_n) # h(n) + g(n)
+
+        if(algorithm == "Greedy"):
+            if(distance == 0):
+                print("Goal State Reached")
+                score.append(0)
+                return(score,level,level_state)
+            score.append(distance)
+        
+    return score,level,level_state
+
+def minimum_state(score, queue, stop, solution_path):
+    all_same = False
+    min_state = None
+    min_score = 99
+    if(all(n == score[0] for n in score) and len(score)>1 ):
+        # r = random.randrange(0,len(score),1) 
+        all_same = True
+        min_state = queue[0]
+        min_score = score[0]
+    if(all_same == False):
+        for i, s in enumerate(score):
+            if(s < min_score):
+                if(queue[i] not in solution_path):
+                    min_score = s 
+                    min_state = queue[i]
+            if(s == 0):
+                stop = True
+        
+    return min_state, stop, min_score
+
+def trace_backwards(solution_path):
+    solution_path.reverse()
+    shortest_path = []
+    for i in range(len(solution_path)):
+        if(i ==0 ):
+            parent = solution_path[i]
+            shortest_path.append(parent)
+            child = solution_path[i+1]
+
+        location = find_blank(parent)
+        possible_actions = possible_moves(location)
+        current_queue = possible_states(parent, possible_actions, location)
+
+        if(i != len(solution_path)-1):
+            child = solution_path[i+1]
+            if(child in current_queue):
+                shortest_path.append(child)
+                parent = child
+    return shortest_path[::-1] # reverse back the list forwards
+
+def path_major(solution_path):
+    solution_path_major = []
+    for path in solution_path:
+        p = []
+        for i in reversed(range(3)): # 2, 2, 2, 1, 1, 1, 0, 0, 0
+            for j in range(3): # 0, 1, 2, ...
+                p.append(path[(j,i)])
+        solution_path_major.append(p)
+    return solution_path_major
+
+# Several Puzzle initializations and goals in dictionary format with (values from bottom to top, left to Right)
+#[0,2][1,2][2,2]
+#[0,1][1,1][2,1]
+#[0,0][0,1][0,2]
+
+initial_puzzle7= {(0,0):7,(1,0):3,(2,0):2,(0,1):6,(1,1):1,(2,1):8,(0,2):4,(1,2):5,(2,2):'b'} # Impossible
+puzzle_goal7= {(0,0):7,(1,0):8,(2,0):'b',(0,1):4,(1,1):5,(2,1):6,(0,2):1,(1,2):2,(2,2):3} # Impossible
+
+initial_puzzle6= {(0,0):8,(1,0):5,(2,0):7,(0,1):'b',(1,1):4,(2,1):6,(0,2):1,(1,2):2,(2,2):3}# Check for Impossible case
+puzzle_goal6= {(0,0):7,(1,0):8,(2,0):6,(0,1):4,(1,1):2,(2,1):5,(0,2):'b',(1,2):1,(2,2):3} # Check for impossible case
+
+initial_puzzle5= {(0,0):3,(1,0):2,(2,0):1,(0,1):4,(1,1):'b',(2,1):8,(0,2):5,(1,2):6,(2,2):7} # Extreme Case
+puzzle_goal5= {(0,0):7,(1,0):6,(2,0):5,(0,1):8,(1,1):'b',(2,1):4,(0,2):1,(1,2):2,(2,2):3} # Extreme Case
+
+initial_puzzle4= {(0,0):8,(1,0):3,(2,0):1,(0,1):5,(1,1):'b',(2,1):6,(0,2):7,(1,2):2,(2,2):4} # Hard
+puzzle_goal4= {(0,0):6,(1,0):7,(2,0):8,(0,1):3,(1,1):4,(2,1):5,(0,2):'b',(1,2):1,(2,2):2} # Hard
+
+initial_puzzle3= {(0,0):1,(1,0):2,(2,0):3,(0,1):4,(1,1):5,(2,1):6,(0,2):7,(1,2):8,(2,2):'b'} # Medium Case
+puzzle_goal3= {(0,0):1,(1,0):2,(2,0):3,(0,1):6,(1,1):5,(2,1):8,(0,2):7,(1,2):4,(2,2):'b'} # Medium Case
+
+initial_puzzle2= {(0,0):2,(1,0):8,(2,0):1,(0,1):'b',(1,1):4,(2,1):3,(0,2):7,(1,2):6,(2,2):5} # Medium Case
+puzzle_goal2= {(0,0):1,(1,0):2,(2,0):3,(0,1):8,(1,1):'b',(2,1):4,(0,2):7,(1,2):6,(2,2):5} # Medium Case
+
+initial_puzzle1= {(0,0):6,(1,0):7,(2,0):8,(0,1):4,(1,1):'b',(2,1):5,(0,2):1,(1,2):2,(2,2):3} # Easy Case
+puzzle_goal1= {(0,0):6,(1,0):7,(2,0):8,(0,1):'b',(1,1):4,(2,1):5,(0,2):1,(1,2):2,(2,2):3} # Easy Case
+
+initial_puzzle = initial_puzzle3 # Set Which Puzzle I want to solve
+goal = puzzle_goal3              # Set Which goal I want to solve
+
+# Choose the Heuristic and the algorithm to solve
+heuristic = "Manhattan" # Misplaced | Manhattan | Both 
+algorithm = "A_Star" # Greedy | A_Star
+
+impossible,stop = False,False
+solution_path,cost_path,shortest_path = [],[],[]
+iterations = 1
+level = 0
+#Keaton Spiller
+
+#CS 441
+
+#Spring 2022
+
+#Programming Assignment #1
+
+import pandas as pd
+import numpy as np
+import random
+
+level_state = {}
+parity_start,parity_goal,impossible = parity(initial_puzzle, goal) # Check if puzzle is impossible
+
+if(impossible!=True):
+
+    # Initializing the first state
+    location = find_blank(initial_puzzle) # find the location of the blank piece
+    possible_actions = possible_moves(location) # find the move's available from the blank square
+    queue = possible_states(initial_puzzle, possible_actions, location) # Find the initial possible states from location
+    if(algorithm == "A_Star"): # keep track of the first state to the current state with levels
+        level_state[tuple(initial_puzzle.items())]=level
+    level += 1 # All states generated from the first state had level = 1
+    initial_score = find_initial_score(initial_puzzle,goal,heuristic)
+    score,level,level_state = find_score(queue,goal,heuristic,level,level_state,algorithm) # Evaluate score of each state
+    cost_path.append(initial_score[0])
+    solution_path.append(initial_puzzle)
+
+    while(stop == False):
+        if(iterations >= 10000): # False Check if program blows up
+            stop = True
+            break
+        current_state,stop,cost = minimum_state(score, queue, stop, solution_path) # Choose lowest state
+        solution_path.append(current_state)
+        cost_path.append(cost)
+        if(stop == False):
+            location = find_blank(current_state)
+            possible_actions = possible_moves(location)
+            current_queue = possible_states(current_state, possible_actions, location) 
+            
+            for q in current_queue:
+                if(q != current_state):
+                    queue.append(q)
+            queue.remove(current_state)
+            if(algorithm == "A_Star"): # keep track of the first state to the current state with levels
+                level = level_state[tuple(current_state.items())] + 1 # The child's level from the parent
+            score,level,level_state = find_score(queue,goal,heuristic,level,level_state,algorithm) # When I find the score, I want to find the next current state
+        iterations += 1
+
+    shortest_path = trace_backwards(solution_path)
+    solution_path_major = path_major(shortest_path) # top to bottom
+
+    print(solution_path_major)
+    print(f"Shortest Path: {len(solution_path_major)}")

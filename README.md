@@ -2,6 +2,8 @@
 Greedy Best First Search and A* Algorithm's with heuristics manhattan and # of misplaced tiles
 * Requirements
 * Python Version 3.10 or higher
+* Jupyter
+
 1. Load libraries numpy, pandas, random
 
 2. Initalize the hyper parameters

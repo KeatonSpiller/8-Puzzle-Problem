@@ -1,5 +1,7 @@
 # 8-Puzzle-Problem
-Greedy Best First Search and A* Algorithm's with heuristics manhattan and # of misplaced tiles
+Greedy Best First Search and A* Algorithm
+Using Manhattan and # of misplaced tiles heuristics
+
 * Requirements
 * Python Version 3.10 or higher
 * Jupyter
@@ -18,9 +20,10 @@ initial_puzzle = initial_puzzle3 # Set Which Puzzle I want to solve
 goal = puzzle_goal3              # Set Which goal I want to solve
 
 Then choose the type of heuristic with the type of algorithm
-# Choose the Heuristic and the algorithm to solve
+Choose the Heuristic and the algorithm to solve
 heuristic = "Manhattan" # Misplaced | Manhattan | Both 
 algorithm = "A_Star" # Greedy | A_Star
-*Puzzle 4 and 5 are the hard puzzles and this doesn't find the solutions on some combinations (*in an hour)
+
+[Puzzle 4 and 5 are the hard puzzles and won't find solutions on some combinations (~ over an hour)]
 
 3. Run the Code block and see the best solution path found to solve the puzzle
